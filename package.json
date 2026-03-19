@@ -1,0 +1,55 @@
+{
+  "name": "vscode-live2d-pet",
+  "displayName": "VSCode Live2D Pet",
+  "description": "Live2D pet for VS Code.",
+  "version": "0.0.1",
+  "publisher": "yourname",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": ["Other"],
+  "main": "./src/extension.js",
+  "icon": "resources/heart.svg",
+  "activationEvents": [
+    "onView:live2dView",
+    "onStartupFinished",
+    "onCommand:vscode-live2d-pet.toggle"
+  ],
+  "contributes": {
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "live2d-pet",
+          "title": "Live2D Pet",
+          "icon": "resources/heart.svg"
+        }
+      ]
+    },
+    "views": {
+      "live2d-pet": [
+        {
+          "id": "live2dView",
+          "name": "Live2D Pet",
+          "type": "webview"
+        }
+      ]
+    },
+    "commands": [
+      {
+        "command": "vscode-live2d-pet.toggle",
+        "title": "Toggle Live2D Pet"
+      },
+      {
+        "command": "vscode-live2d-pet.openWebviewDevTools",
+        "title": "Open Live2D Webview DevTools"
+      }
+    ],
+    "keybindings": [
+      {
+        "command": "vscode-live2d-pet.toggle",
+        "key": "ctrl+alt+l",
+        "mac": "cmd+alt+l"
+      }
+    ]
+  }
+}
