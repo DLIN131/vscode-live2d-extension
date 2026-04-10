@@ -1,4 +1,9 @@
 const vscode = require('vscode');
+const fs = require('fs');
+const path = require('path');
+
+const EXTENSION_CONFIG_ID = 'vscode-live2d-pet';
+const MODEL_CONFIG_KEY = 'selectedModel';
 
 function activate(context) {
     const output = vscode.window.createOutputChannel('Live2D Pet');
@@ -17,7 +22,7 @@ function activate(context) {
                 localResourceRoots: [context.extensionUri]
             };
 
-            webviewView.webview.html = getHtml(webviewView.webview, context.extensionUri);
+            webviewView.webview.html = getHtml(webviewView.webview, context.extensionUri, output);
             output.appendLine('[resolveWebviewView] Webview HTML set.');
 
             setTimeout(() => {
@@ -74,15 +79,114 @@ function activate(context) {
         })
     );
     output.appendLine('[activate] Command registered: vscode-live2d-pet.openWebviewDevTools');
+
+    context.subscriptions.push(
+        vscode.commands.registerCommand('vscode-live2d-pet.selectModel', async () => {
+            output.appendLine('[command] selectModel');
+            const modelEntries = getModelEntries(context.extensionUri, output);
+            if (modelEntries.length === 0) {
+                vscode.window.showWarningMessage('No Live2D model json found under resources/live2d.');
+                return;
+            }
+
+            const currentModel = getConfiguredModelPath(modelEntries);
+            const picks = modelEntries.map(entry => ({
+                label: entry.path,
+                description: entry.path === currentModel ? 'Current' : ''
+            }));
+
+            const picked = await vscode.window.showQuickPick(picks, {
+                title: 'Select Live2D Model',
+                placeHolder: 'Choose a model json file under resources/live2d'
+            });
+
+            if (!picked) {
+                return;
+            }
+
+            await vscode.workspace.getConfiguration(EXTENSION_CONFIG_ID).update(
+                MODEL_CONFIG_KEY,
+                picked.label,
+                vscode.ConfigurationTarget.Global
+            );
+            output.appendLine(`[command] selected model: ${picked.label}`);
+
+            if (panel) {
+                panel.webview.html = getHtml(panel.webview, context.extensionUri, output);
+                output.appendLine('[command] webview refreshed with selected model');
+            }
+
+            vscode.window.showInformationMessage(`Live2D model switched to: ${picked.label}`);
+        })
+    );
+    output.appendLine('[activate] Command registered: vscode-live2d-pet.selectModel');
 }
 
-function getHtml(webview, extensionUri) {
+function getConfiguredModelPath(modelEntries) {
+    const configured = vscode.workspace.getConfiguration(EXTENSION_CONFIG_ID).get(MODEL_CONFIG_KEY);
+    if (typeof configured === 'string' && modelEntries.some(entry => entry.path === configured)) {
+        return configured;
+    }
+
+    return modelEntries[0]?.path || '';
+}
+
+function getModelEntries(extensionUri, output) {
+    const live2dDir = path.join(extensionUri.fsPath, 'resources', 'live2d');
+    if (!fs.existsSync(live2dDir)) {
+        return [];
+    }
+
+    const results = [];
+    walkFiles(live2dDir, absPath => {
+        const lower = absPath.toLowerCase();
+        const isModelJson = lower.endsWith('.model.json') || lower.endsWith('.model3.json');
+        if (!isModelJson) {
+            return;
+        }
+
+        const relativeFromLive2d = path.relative(live2dDir, absPath).replace(/\\/g, '/');
+        results.push({
+            path: relativeFromLive2d,
+            absPath
+        });
+    });
+
+    results.sort((a, b) => a.path.localeCompare(b.path));
+    output.appendLine(`[models] discovered ${results.length} model json file(s)`);
+    return results;
+}
+
+function walkFiles(dir, onFile) {
+    const entries = fs.readdirSync(dir, { withFileTypes: true });
+    for (const entry of entries) {
+        const fullPath = path.join(dir, entry.name);
+        if (entry.isDirectory()) {
+            walkFiles(fullPath, onFile);
+            continue;
+        }
+
+        if (entry.isFile()) {
+            onFile(fullPath);
+        }
+    }
+}
+
+function getHtml(webview, extensionUri, output) {
     const l2dScript = webview.asWebviewUri(
         vscode.Uri.joinPath(extensionUri, 'resources', 'live2d', 'L2Dwidget.min.js')
     );
-    const modelJson = webview.asWebviewUri(
-        vscode.Uri.joinPath(extensionUri, 'resources', 'live2d', 'haru', 'haru01.model.json')
-    );
+    const modelEntries = getModelEntries(extensionUri, output);
+    const selectedModelPath = getConfiguredModelPath(modelEntries);
+    const modelJson = selectedModelPath
+        ? webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'live2d', ...selectedModelPath.split('/')))
+        : '';
+
+    if (!selectedModelPath) {
+        output.appendLine('[models] no model file found; webview will show warning');
+    } else {
+        output.appendLine(`[models] using model: ${selectedModelPath}`);
+    }
 
     return /*html*/`<!DOCTYPE html>
 <html>
@@ -197,6 +301,12 @@ function getHtml(webview, extensionUri) {
 
         let visible = true;
         try {
+            if (!"${modelJson}") {
+                reportError('No model json found under resources/live2d.');
+                if (bootEl) bootEl.textContent = 'No model found';
+                throw new Error('No model found');
+            }
+
             if (typeof L2Dwidget === 'undefined') {
                 reportError('L2Dwidget is not defined. Script failed to load.');
             } else {

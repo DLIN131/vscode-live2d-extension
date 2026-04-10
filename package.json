@@ -12,7 +12,8 @@
   "activationEvents": [
     "onView:live2dView",
     "onStartupFinished",
-    "onCommand:vscode-live2d-pet.toggle"
+    "onCommand:vscode-live2d-pet.toggle",
+    "onCommand:vscode-live2d-pet.selectModel"
   ],
   "contributes": {
     "viewsContainers": {
@@ -39,15 +40,34 @@
         "title": "Toggle Live2D Pet"
       },
       {
+        "command": "vscode-live2d-pet.selectModel",
+        "title": "Select Live2D Model"
+      },
+      {
         "command": "vscode-live2d-pet.openWebviewDevTools",
         "title": "Open Live2D Webview DevTools"
       }
     ],
+    "configuration": {
+      "title": "VSCode Live2D Pet",
+      "properties": {
+        "vscode-live2d-pet.selectedModel": {
+          "type": "string",
+          "default": "haru/haru01.model.json",
+          "description": "Relative model path under resources/live2d. Use command 'Select Live2D Model' to switch from discovered models."
+        }
+      }
+    },
     "keybindings": [
       {
         "command": "vscode-live2d-pet.toggle",
         "key": "ctrl+alt+l",
         "mac": "cmd+alt+l"
+      },
+      {
+        "command": "vscode-live2d-pet.selectModel",
+        "key": "ctrl+alt+m",
+        "mac": "cmd+alt+m"
       }
     ]
   }
