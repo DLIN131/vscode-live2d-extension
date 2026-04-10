@@ -9,7 +9,6 @@
   },
   "categories": ["Other"],
   "main": "./src/extension.js",
-  "icon": "resources/heart.svg",
   "activationEvents": [
     "onView:live2dView",
     "onStartupFinished",
