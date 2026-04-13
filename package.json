@@ -56,7 +56,7 @@
         "vscode-live2d-pet.selectedModel": {
           "type": "string",
           "default": "haru/haru01.model.json",
-          "description": "Relative model path under resources/live2d. Use command 'Select Live2D Model' to switch from discovered models."
+          "description": "Relative model path under resources/live2d/model. Use command 'Select Live2D Model' to switch from discovered models."
         }
       }
     },

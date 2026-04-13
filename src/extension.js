@@ -138,7 +138,7 @@ function getConfiguredModelPath(modelEntries) {
 }
 
 function getModelEntries(extensionUri, output) {
-    const live2dDir = path.join(extensionUri.fsPath, 'resources', 'live2d');
+    const live2dDir = path.join(extensionUri.fsPath, 'resources', 'live2d', 'model');
     if (!fs.existsSync(live2dDir)) {
         return [];
     }
@@ -205,10 +205,10 @@ function getHtml(webview, extensionUri, output) {
     const selectedModelIsCubism3 = isCubism3Model(selectedModelPath);
     const selectedModelDirSegments = selectedModelPath ? selectedModelPath.split('/').slice(0, -1) : [];
     const modelJson = selectedModelPath
-        ? webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'live2d', ...selectedModelPath.split('/')))
+        ? webview.asWebviewUri(vscode.Uri.joinPath(extensionUri, 'resources', 'live2d', 'model', ...selectedModelPath.split('/')))
         : '';
     const modelBaseUri = webview.asWebviewUri(
-        vscode.Uri.joinPath(extensionUri, 'resources', 'live2d', ...selectedModelDirSegments)
+        vscode.Uri.joinPath(extensionUri, 'resources', 'live2d', 'model', ...selectedModelDirSegments)
     );
 
     const nonce = getNonce();

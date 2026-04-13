@@ -2,4 +2,4 @@ node_modules
 .vscode-test/
 *.vsix
 .env
-aersasi_3
+model
