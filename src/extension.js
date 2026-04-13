@@ -502,6 +502,63 @@ function getHtml(webview, extensionUri, output) {
             }
 
             relayoutModel();
+
+            // Setup interactions
+            model.interactive = true;
+            // Provide a default hit area if none is defined (the whole model bounds)
+            
+            // 1. Mouse tracking (Eyes/Head follow mouse)
+            app.view.addEventListener('pointermove', (e) => {
+                if (typeof model.focus === 'function') {
+                    model.focus(e.clientX, e.clientY);
+                }
+            });
+
+            // 2. Click interaction (Play random motion)
+            model.on('pointerdown', (e) => {
+                try {
+                    const motions = model.internalModel.settings.motions || model.internalModel.settings.Motions;
+                    if (!motions) return;
+                    
+                    const availableGroups = Object.keys(motions);
+                    if (availableGroups.length === 0) return;
+
+                    // Exclude idle motions from random pool if possible
+                    let interactionGroups = availableGroups.filter(g => !g.toLowerCase().includes('idle'));
+                    if (interactionGroups.length === 0) {
+                        interactionGroups = availableGroups;
+                    }
+
+                    const targetGroup = interactionGroups[Math.floor(Math.random() * interactionGroups.length)];
+                    reportLog('Playing motion group: ' + targetGroup);
+                    model.motion(targetGroup);
+                } catch (err) {
+                    reportError('Motion error: ' + err.message);
+                }
+            });
+
+            // 3. Ensure Idle motion plays
+            try {
+                const motions = model.internalModel.settings.motions || model.internalModel.settings.Motions;
+                let idleGroup = 'idle';
+                if (motions) {
+                    const keys = Object.keys(motions);
+                    const foundIdle = keys.find(k => k.toLowerCase() === 'idle') || keys.find(k => k.toLowerCase().includes('idle'));
+                    if (foundIdle) {
+                        idleGroup = foundIdle;
+                    }
+                }
+                
+                if (model.internalModel.motionManager) {
+                    model.internalModel.motionManager.idleMotionGroup = idleGroup;
+                }
+                
+                // Jump-start the idle motion if it isn't playing
+                setTimeout(() => {
+                    model.motion(idleGroup);
+                }, 500);
+            } catch (ignore) {}
+
             if (bootEl) bootEl.textContent = 'Cubism3 ready';
             reportLog('Cubism 3 model loaded successfully.');
         }

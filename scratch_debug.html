@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta http-equiv="Content-Security-Policy" content="default-src * 'unsafe-inline' 'unsafe-eval' data: blob:;">
-    <style nonce="thrU8q9YwLPAdsFqFF6V6LCckrcp7R0T">
+    <style nonce="RG3DFngy9iHI8OCFIrorxTL80vz7Hym0">
         body,html{margin:0;padding:0;height:100%;overflow:hidden;background:transparent;}
         #waifu{position:absolute;bottom:0;right:0;pointer-events:auto;}
     </style>
@@ -15,7 +15,7 @@
     <div id="waifu"></div>
 
     
-    <script nonce="thrU8q9YwLPAdsFqFF6V6LCckrcp7R0T">
+    <script nonce="RG3DFngy9iHI8OCFIrorxTL80vz7Hym0">
         const selectedModelPath = "aersasi_3/aersasi_3.model3.json";
         const selectedModelIsCubism3 = true;
         const modelJsonPath = "https://file%2B.vscode-resource.vscode-cdn.net/d%3A/proj_bk/personal/vscode_ext/vscode-live2d-pet/resources/live2d/aersasi_3/aersasi_3.model3.json";
@@ -121,7 +121,7 @@
         function loadScript(url) {
             return new Promise((resolve, reject) => {
                 const script = document.createElement('script');
-                script.nonce = "thrU8q9YwLPAdsFqFF6V6LCckrcp7R0T";
+                script.nonce = "RG3DFngy9iHI8OCFIrorxTL80vz7Hym0";
                 script.src = url;
                 script.async = true;
                 script.onload = () => resolve();
@@ -279,6 +279,63 @@
             }
 
             relayoutModel();
+
+            // Setup interactions
+            model.interactive = true;
+            // Provide a default hit area if none is defined (the whole model bounds)
+            
+            // 1. Mouse tracking (Eyes/Head follow mouse)
+            app.view.addEventListener('pointermove', (e) => {
+                if (typeof model.focus === 'function') {
+                    model.focus(e.clientX, e.clientY);
+                }
+            });
+
+            // 2. Click interaction (Play random motion)
+            model.on('pointerdown', (e) => {
+                try {
+                    const motions = model.internalModel.settings.motions || model.internalModel.settings.Motions;
+                    if (!motions) return;
+                    
+                    const availableGroups = Object.keys(motions);
+                    if (availableGroups.length === 0) return;
+
+                    // Exclude idle motions from random pool if possible
+                    let interactionGroups = availableGroups.filter(g => !g.toLowerCase().includes('idle'));
+                    if (interactionGroups.length === 0) {
+                        interactionGroups = availableGroups;
+                    }
+
+                    const targetGroup = interactionGroups[Math.floor(Math.random() * interactionGroups.length)];
+                    reportLog('Playing motion group: ' + targetGroup);
+                    model.motion(targetGroup);
+                } catch (err) {
+                    reportError('Motion error: ' + err.message);
+                }
+            });
+
+            // 3. Ensure Idle motion plays
+            try {
+                const motions = model.internalModel.settings.motions || model.internalModel.settings.Motions;
+                let idleGroup = 'idle';
+                if (motions) {
+                    const keys = Object.keys(motions);
+                    const foundIdle = keys.find(k => k.toLowerCase() === 'idle') || keys.find(k => k.toLowerCase().includes('idle'));
+                    if (foundIdle) {
+                        idleGroup = foundIdle;
+                    }
+                }
+                
+                if (model.internalModel.motionManager) {
+                    model.internalModel.motionManager.idleMotionGroup = idleGroup;
+                }
+                
+                // Jump-start the idle motion if it isn't playing
+                setTimeout(() => {
+                    model.motion(idleGroup);
+                }, 500);
+            } catch (ignore) {}
+
             if (bootEl) bootEl.textContent = 'Cubism3 ready';
             reportLog('Cubism 3 model loaded successfully.');
         }
