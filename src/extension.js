@@ -229,9 +229,37 @@ function getHtml(webview, extensionUri, output) {
     <style nonce="${nonce}">
         body,html{margin:0;padding:0;height:100%;overflow:hidden;background:transparent;}
         #waifu{position:absolute;bottom:0;right:0;pointer-events:auto;}
+
+        /* Control Panel Styles */
+        #controls-toggle {
+            position: fixed; right: 10px; top: 10px;
+            cursor: pointer; z-index: 10000;
+            opacity: 0.3; transition: opacity 0.2s;
+            font-size: 16px; user-select: none;
+        }
+        #controls-toggle:hover { opacity: 1; }
+        #controls-panel {
+            position: fixed; right: 10px; top: 36px;
+            background: rgba(30,30,30,0.9); border: 1px solid #444; border-radius: 6px;
+            padding: 12px; color: #fff; z-index: 10000; font-family: sans-serif; font-size: 11px;
+            display: none; flex-direction: column; gap: 8px; box-shadow: 0 4px 6px rgba(0,0,0,0.3);
+            width: 160px;
+        }
+        #controls-panel label {
+            display: flex; justify-content: space-between; align-items: center;
+        }
+        #controls-panel input[type=range] { width: 90px; }
     </style>
 </head>
 <body>
+    <div id="controls-toggle">⚙️</div>
+    <div id="controls-panel">
+        <label>大小 <input type="range" id="cfg-scale" min="0.1" max="3" step="0.1" value="1"></label>
+        <label>左⇔右 <input type="range" id="cfg-x" min="-300" max="300" step="1" value="0"></label>
+        <label>下⇔上 <input type="range" id="cfg-y" min="-300" max="300" step="1" value="0"></label>
+        <label>透明度 <input type="range" id="cfg-opacity" min="0.1" max="1" step="0.1" value="1"></label>
+    </div>
+    
     <div id="boot" style="position:fixed;left:6px;top:6px;background:rgba(0,0,0,0.6);color:#fff;padding:4px 6px;font-size:11px;border-radius:4px;z-index:9999;">
         booting...
     </div>
@@ -340,6 +368,48 @@ function getHtml(webview, extensionUri, output) {
         reportLog('Webview script started.');
 
         let visible = true;
+        let pConfig = { scale: 1, x: 0, y: 0, opacity: 1 };
+        try {
+            const savedState = vscodeApi ? vscodeApi.getState() : null;
+            if (savedState && typeof savedState.scale === 'number') {
+                pConfig = savedState;
+            }
+        } catch(e){}
+
+        // Init UI controls
+        document.getElementById('controls-toggle').addEventListener('click', () => {
+            const panel = document.getElementById('controls-panel');
+            panel.style.display = panel.style.display === 'flex' ? 'none' : 'flex';
+        });
+
+        const cScale = document.getElementById('cfg-scale');
+        const cX = document.getElementById('cfg-x');
+        const cY = document.getElementById('cfg-y');
+        const cOpacity = document.getElementById('cfg-opacity');
+
+        cScale.value = pConfig.scale;
+        cX.value = pConfig.x;
+        cY.value = pConfig.y;
+        cOpacity.value = pConfig.opacity;
+
+        function applyVisualConfig() {
+            pConfig = {
+                scale: parseFloat(cScale.value),
+                x: parseInt(cX.value),
+                y: parseInt(cY.value),
+                opacity: parseFloat(cOpacity.value)
+            };
+            if (vscodeApi) vscodeApi.setState(pConfig);
+
+            const w = document.getElementById('waifu');
+            if (w) {
+                w.style.transform = \`translate(\${pConfig.x}px, \${pConfig.y}px) scale(\${pConfig.scale})\`;
+                w.style.transformOrigin = 'bottom right';
+                w.style.opacity = pConfig.opacity;
+            }
+        }
+
+        [cScale, cX, cY, cOpacity].forEach(el => el.addEventListener('input', applyVisualConfig));
 
         function loadScript(url) {
             return new Promise((resolve, reject) => {
@@ -442,6 +512,7 @@ function getHtml(webview, extensionUri, output) {
                     reportError('Live2D canvas not found after legacy init.');
                 } else {
                     reportLog('Legacy Live2D canvas found.');
+                    applyVisualConfig();
                     if (bootEl) bootEl.textContent = 'Live2D ready';
                 }
             }, 1000);
@@ -488,6 +559,9 @@ function getHtml(webview, extensionUri, output) {
             const model = await window.PIXI.live2d.Live2DModel.from(rewrittenModelUrl);
             app.stage.addChild(model);
 
+            window._cubismModel = model;
+            window._cubismApp = app;
+
             function relayoutModel() {
                 const baseScale = Math.min(
                     app.renderer.width / model.width,
@@ -499,6 +573,7 @@ function getHtml(webview, extensionUri, output) {
                 }
                 model.x = app.renderer.width / 2;
                 model.y = app.renderer.height;
+                applyVisualConfig();
             }
 
             relayoutModel();
