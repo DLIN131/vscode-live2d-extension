@@ -7,7 +7,9 @@
   "engines": {
     "vscode": "^1.85.0"
   },
-  "categories": ["Other"],
+  "categories": [
+    "Other"
+  ],
   "main": "./src/extension.js",
   "activationEvents": [
     "onView:live2dView",
@@ -70,5 +72,10 @@
         "mac": "cmd+alt+m"
       }
     ]
+  },
+  "devDependencies": {
+    "live2dcubismcore": "^1.0.2",
+    "pixi-live2d-display": "^0.4.0",
+    "pixi.js": "^6.5.10"
   }
 }
