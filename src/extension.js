@@ -221,7 +221,7 @@ function getHtml(webview, extensionUri, output) {
         output.appendLine(`[models] using legacy model: ${selectedModelPath}`);
     }
 
-    const html = /*html*/`<!DOCTYPE html>
+    return /*html*/`<!DOCTYPE html>
 <html>
 <head>
     <meta charset="UTF-8">
@@ -594,9 +594,6 @@ function getHtml(webview, extensionUri, output) {
     </script>
 </body>
 </html>`;
-
-    fs.writeFileSync(path.join(extensionUri.fsPath, 'scratch_debug.html'), html);
-    return html;
 }
 
 exports.activate = activate;
